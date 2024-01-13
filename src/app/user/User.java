@@ -48,6 +48,8 @@ public final class User extends UserAbstract {
     @Setter
     private LikedContentPage likedContentPage;
     private static Admin admin;
+    @Getter
+    private List<Merchandise> merchandises = new ArrayList<>();
 
     /**
      * Update admin.

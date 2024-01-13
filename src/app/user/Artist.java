@@ -7,6 +7,8 @@ import app.audio.Collections.Album;
 import app.audio.Collections.AlbumOutput;
 import app.audio.Files.Song;
 import app.pages.ArtistPage;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * The type Artist.
@@ -15,6 +17,9 @@ public final class Artist extends ContentCreator {
     private ArrayList<Album> albums;
     private ArrayList<Merchandise> merch;
     private ArrayList<Event> events;
+    @Getter
+    @Setter
+    private double merchRevenue = 0.0;
 
     /**
      * Instantiates a new Artist.

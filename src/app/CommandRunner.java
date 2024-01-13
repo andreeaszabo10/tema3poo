@@ -11,15 +11,16 @@ import app.player.PlayerStats;
 import app.searchBar.Filters;
 import app.user.Artist;
 import app.user.Host;
+import app.user.Merchandise;
 import app.user.User;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import fileio.input.CommandInput;
+import org.checkerframework.checker.units.qual.A;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * The type Command runner.
@@ -28,7 +29,7 @@ public final class CommandRunner {
     /**
      * The Object mapper.
      */
-    private static ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     private static Admin admin;
 
     /**
@@ -102,32 +103,11 @@ public final class CommandRunner {
                 topArtists = get5(topArtists);
                 resultNode.set("topArtists", objectMapper.valueToTree(topArtists));
 
-                HashMap<String, Integer> topGenres = new HashMap<>();
-                for (Map.Entry<AudioFile, Integer> entry
-                        : user.getPlayer().getListened().entrySet()) {
-                    if (entry.getKey() instanceof Song song) {
-                        if (topGenres.containsKey(song.getGenre())) {
-                            topGenres.put(song.getGenre(),
-                                    topGenres.get(song.getGenre()) + entry.getValue());
-                        } else {
-                            topGenres.put(song.getGenre(), entry.getValue());
-                        }
-                    }
-                }
+                HashMap<String, Integer> topGenres = getStringIntegerHashMap(user);
                 topGenres = get5(topGenres);
                 resultNode.set("topGenres", objectMapper.valueToTree(topGenres));
 
-                HashMap<String, Integer> topSongs = new HashMap<>();
-                for (Map.Entry<AudioFile, Integer> entry
-                        : user.getPlayer().getListened().entrySet()) {
-                    if (entry.getKey() instanceof Song song) {
-                        if (topSongs.containsKey(song.getName())) {
-                            topSongs.put(song.getName(), topSongs.get(song.getName()) + entry.getValue());
-                        } else {
-                            topSongs.put(song.getName(), entry.getValue());
-                        }
-                    }
-                }
+                HashMap<String, Integer> topSongs = getMap(user);
                 topSongs = get5(topSongs);
                 resultNode.set("topSongs", objectMapper.valueToTree(topSongs));
 
@@ -271,6 +251,37 @@ public final class CommandRunner {
         return outputNode;
     }
 
+    private static HashMap<String, Integer> getMap(User user) {
+        HashMap<String, Integer> topSongs = new HashMap<>();
+        for (Map.Entry<AudioFile, Integer> entry
+                : user.getPlayer().getListened().entrySet()) {
+            if (entry.getKey() instanceof Song song) {
+                if (topSongs.containsKey(song.getName())) {
+                    topSongs.put(song.getName(), topSongs.get(song.getName()) + entry.getValue());
+                } else {
+                    topSongs.put(song.getName(), entry.getValue());
+                }
+            }
+        }
+        return topSongs;
+    }
+
+    private static HashMap<String, Integer> getStringIntegerHashMap(User user) {
+        HashMap<String, Integer> topGenres = new HashMap<>();
+        for (Map.Entry<AudioFile, Integer> entry
+                : user.getPlayer().getListened().entrySet()) {
+            if (entry.getKey() instanceof Song song) {
+                if (topGenres.containsKey(song.getGenre())) {
+                    topGenres.put(song.getGenre(),
+                            topGenres.get(song.getGenre()) + entry.getValue());
+                } else {
+                    topGenres.put(song.getGenre(), entry.getValue());
+                }
+            }
+        }
+        return topGenres;
+    }
+
     private static HashMap<String, Integer> get5(HashMap<String, Integer> topAlbums) {
         HashMap<String, Integer> result = new LinkedHashMap<>();
         topAlbums.entrySet().stream()
@@ -305,18 +316,95 @@ public final class CommandRunner {
     /**
      * Select object node.
      *
+     * @param commandInput the command input
+     * @return the object node
+     */
+    public static ObjectNode buyMerch(final CommandInput commandInput) {
+        User user = admin.getUser(commandInput.getUsername());
+
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("command", commandInput.getCommand());
+        objectNode.put("user", commandInput.getUsername());
+        objectNode.put("timestamp", commandInput.getTimestamp());
+        int ok = 1;
+        for (Artist artist : admin.getArtists()) {
+            for (Merchandise merchandise : artist.getMerch()) {
+                if (merchandise.getName().equals(commandInput.getName())) {
+                    user.getMerchandises().add(merchandise);
+                    artist.setMerchRevenue(artist.getMerchRevenue() + merchandise.getPrice());
+                    if (!admin.getListenedArtists().contains(artist.getUsername())) {
+                        admin.getListenedArtists().add(artist.getUsername());
+                    }
+                    ok = 0;
+                    break;
+                }
+            }
+        }
+        if (ok == 1) {
+            objectNode.put("message", "The merch " + commandInput.getName() + " doesn't exist.");
+        } else {
+            objectNode.put("message", commandInput.getUsername()
+                    + " has added new merch successfully.");
+        }
+
+        return objectNode;
+    }
+
+    /**
+     * Select object node.
+     *
+     * @param commandInput the command input
+     * @return the object node
+     */
+    public static ObjectNode seeMerch(final CommandInput commandInput) {
+        User user = admin.getUser(commandInput.getUsername());
+        ArrayNode resultNode = objectMapper.createArrayNode();
+
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("command", commandInput.getCommand());
+        objectNode.put("user", commandInput.getUsername());
+        objectNode.put("timestamp", commandInput.getTimestamp());
+        for (Merchandise merchandise : user.getMerchandises()) {
+            resultNode.add(merchandise.getName());
+        }
+        objectNode.set("result", resultNode);
+
+        return objectNode;
+    }
+
+    public static Artist getArtistDetails(String artistName) {
+        for (Artist artist : admin.getArtists()) {
+            if (artist.getUsername().equals(artistName)) {
+                return artist;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Select object node.
+     *
      * @return the object node
      */
     public static ObjectNode endProgram() {
         ObjectNode resultNode = JsonNodeFactory.instance.objectNode();
-        Collections.sort(admin.getListenedArtists());
+        List<Artist> artists = new ArrayList<>();
         for (String artist : admin.getListenedArtists()) {
+            Artist artist1 = getArtistDetails(artist);
+            artists.add(artist1);
+        }
+
+        artists.sort(
+                Comparator.comparingDouble(Artist::getMerchRevenue).reversed()
+                        .thenComparing(Artist::getUsername)
+        );
+        for (Artist artist : artists) {
             ObjectNode artistNode = JsonNodeFactory.instance.objectNode();
-            artistNode.put("merchRevenue", 0.0);
+            artistNode.put("merchRevenue", artist.getMerchRevenue());
             artistNode.put("songRevenue", 0.0);
-            artistNode.put("ranking", admin.getListenedArtists().indexOf(artist) + 1);
+            artistNode.put("ranking", artists.indexOf(artist) + 1);
             artistNode.put("mostProfitableSong", "N/A");
-            resultNode.set(artist, artistNode);
+            resultNode.set(artist.getUsername(), artistNode);
         }
 
         ObjectNode outputNode = JsonNodeFactory.instance.objectNode();
@@ -569,7 +657,7 @@ public final class CommandRunner {
         objectNode.put("command", commandInput.getCommand());
         objectNode.put("user", commandInput.getUsername());
         objectNode.put("timestamp", commandInput.getTimestamp());
-        objectNode.put("result", objectMapper.valueToTree(playlists));
+        objectNode.set("result", objectMapper.valueToTree(playlists));
 
         return objectNode;
     }
@@ -607,7 +695,7 @@ public final class CommandRunner {
         objectNode.put("command", commandInput.getCommand());
         objectNode.put("user", commandInput.getUsername());
         objectNode.put("timestamp", commandInput.getTimestamp());
-        objectNode.put("stats", objectMapper.valueToTree(stats));
+        objectNode.set("stats", objectMapper.valueToTree(stats));
 
         return objectNode;
     }
@@ -626,7 +714,7 @@ public final class CommandRunner {
         objectNode.put("command", commandInput.getCommand());
         objectNode.put("user", commandInput.getUsername());
         objectNode.put("timestamp", commandInput.getTimestamp());
-        objectNode.put("result", objectMapper.valueToTree(songs));
+        objectNode.set("result", objectMapper.valueToTree(songs));
 
         return objectNode;
     }
@@ -645,7 +733,7 @@ public final class CommandRunner {
         objectNode.put("command", commandInput.getCommand());
         objectNode.put("user", commandInput.getUsername());
         objectNode.put("timestamp", commandInput.getTimestamp());
-        objectNode.put("result", objectMapper.valueToTree(preferredGenre));
+        objectNode.set("result", objectMapper.valueToTree(preferredGenre));
 
         return objectNode;
     }
@@ -749,7 +837,7 @@ public final class CommandRunner {
         objectNode.put("command", commandInput.getCommand());
         objectNode.put("user", commandInput.getUsername());
         objectNode.put("timestamp", commandInput.getTimestamp());
-        objectNode.put("result", objectMapper.valueToTree(albums));
+        objectNode.set("result", objectMapper.valueToTree(albums));
 
         return objectNode;
     }
@@ -836,7 +924,7 @@ public final class CommandRunner {
         objectNode.put("command", commandInput.getCommand());
         objectNode.put("user", commandInput.getUsername());
         objectNode.put("timestamp", commandInput.getTimestamp());
-        objectNode.put("result", objectMapper.valueToTree(podcasts));
+        objectNode.set("result", objectMapper.valueToTree(podcasts));
 
         return objectNode;
     }
@@ -903,7 +991,7 @@ public final class CommandRunner {
         ObjectNode objectNode = objectMapper.createObjectNode();
         objectNode.put("command", commandInput.getCommand());
         objectNode.put("timestamp", commandInput.getTimestamp());
-        objectNode.put("result", objectMapper.valueToTree(onlineUsers));
+        objectNode.set("result", objectMapper.valueToTree(onlineUsers));
 
         return objectNode;
     }
@@ -919,7 +1007,7 @@ public final class CommandRunner {
         ObjectNode objectNode = objectMapper.createObjectNode();
         objectNode.put("command", commandInput.getCommand());
         objectNode.put("timestamp", commandInput.getTimestamp());
-        objectNode.put("result", objectMapper.valueToTree(users));
+        objectNode.set("result", objectMapper.valueToTree(users));
 
         return objectNode;
     }
@@ -969,7 +1057,7 @@ public final class CommandRunner {
         ObjectNode objectNode = objectMapper.createObjectNode();
         objectNode.put("command", commandInput.getCommand());
         objectNode.put("timestamp", commandInput.getTimestamp());
-        objectNode.put("result", objectMapper.valueToTree(albums));
+        objectNode.set("result", objectMapper.valueToTree(albums));
 
         return objectNode;
     }
@@ -985,7 +1073,7 @@ public final class CommandRunner {
         ObjectNode objectNode = objectMapper.createObjectNode();
         objectNode.put("command", commandInput.getCommand());
         objectNode.put("timestamp", commandInput.getTimestamp());
-        objectNode.put("result", objectMapper.valueToTree(artists));
+        objectNode.set("result", objectMapper.valueToTree(artists));
 
         return objectNode;
     }
@@ -1002,7 +1090,7 @@ public final class CommandRunner {
         ObjectNode objectNode = objectMapper.createObjectNode();
         objectNode.put("command", commandInput.getCommand());
         objectNode.put("timestamp", commandInput.getTimestamp());
-        objectNode.put("result", objectMapper.valueToTree(songs));
+        objectNode.set("result", objectMapper.valueToTree(songs));
 
         return objectNode;
     }
@@ -1019,7 +1107,7 @@ public final class CommandRunner {
         ObjectNode objectNode = objectMapper.createObjectNode();
         objectNode.put("command", commandInput.getCommand());
         objectNode.put("timestamp", commandInput.getTimestamp());
-        objectNode.put("result", objectMapper.valueToTree(playlists));
+        objectNode.set("result", objectMapper.valueToTree(playlists));
 
         return objectNode;
     }
