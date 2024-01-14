@@ -19,6 +19,9 @@ public final class Artist extends ContentCreator {
     private ArrayList<Event> events;
     @Getter
     @Setter
+    private ArtistPage artistPage;
+    @Getter
+    @Setter
     private double merchRevenue = 0.0;
 
     /**

@@ -7,6 +7,7 @@ import app.audio.Collections.Podcast;
 import app.audio.Files.AudioFile;
 import app.audio.Files.Episode;
 import app.audio.Files.Song;
+import app.pages.Page;
 import app.player.Player;
 import app.user.Announcement;
 import app.user.Artist;
@@ -727,12 +728,33 @@ public final class Admin {
         }
 
         switch (nextPage) {
+            case "Artist" -> {
+                if (user.getPlayer().getCurrentAudioFile() instanceof Song song) {
+                        Artist artist = CommandRunner.getArtistDetails(song.getArtist());
+                        user.setCurrentPage(artist.getPage());
+                    }
+            }
+            case "Host" -> {
+                if (user.getPlayer().getCurrentAudioCollection() instanceof Podcast podcast) {
+                    Host host = CommandRunner.getHostDetails(podcast.getOwner());
+                    user.setCurrentPage(host.getPage());
+                }
+            }
             case "Home" -> user.setCurrentPage(user.getHomePage());
             case "LikedContent" -> user.setCurrentPage(user.getLikedContentPage());
             default -> {
                 return "%s is trying to access a non-existent page.".formatted(username);
             }
         }
+        if (user.getIndex() != user.getPages().size()) {
+            List<Page> pages = new ArrayList<>();
+            for (int i = 0; i < user.getIndex(); i++) {
+                pages.add(user.getPages().get(i));
+            }
+            user.setPages(pages);
+        }
+        user.getPages().add(user.getCurrentPage());
+        user.setIndex(user.getPages().size());
 
         return "%s accessed %s successfully.".formatted(username, nextPage);
     }
@@ -758,7 +780,11 @@ public final class Admin {
             return "%s is offline.".formatted(user.getUsername());
         }
 
-        return user.getCurrentPage().printCurrentPage();
+        if (user.getCurrentPage() != null) {
+            return user.getCurrentPage().printCurrentPage();
+        } else {
+            return null;
+        }
     }
 
     /**

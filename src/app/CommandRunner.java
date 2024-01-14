@@ -1,12 +1,10 @@
 package app;
 
-import app.audio.Collections.AlbumOutput;
-import app.audio.Collections.PlaylistOutput;
-import app.audio.Collections.Podcast;
-import app.audio.Collections.PodcastOutput;
+import app.audio.Collections.*;
 import app.audio.Files.AudioFile;
 import app.audio.Files.Episode;
 import app.audio.Files.Song;
+import app.pages.ArtistPage;
 import app.player.PlayerStats;
 import app.searchBar.Filters;
 import app.user.Artist;
@@ -18,7 +16,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import fileio.input.CommandInput;
-import org.checkerframework.checker.units.qual.A;
 
 import java.util.*;
 
@@ -372,10 +369,29 @@ public final class CommandRunner {
         return objectNode;
     }
 
+    /**
+     * Select object node.
+     *
+     * @return the object node
+     */
     public static Artist getArtistDetails(String artistName) {
         for (Artist artist : admin.getArtists()) {
             if (artist.getUsername().equals(artistName)) {
                 return artist;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Select object node.
+     *
+     * @return the object node
+     */
+    public static Host getHostDetails(String hostName) {
+        for (Host host : admin.getHosts()) {
+            if (host.getUsername().equals(hostName)) {
+                return host;
             }
         }
         return null;
@@ -415,6 +431,176 @@ public final class CommandRunner {
 
     /**
      * Load object node.
+     *
+     * @param commandInput the command input
+     * @return the object node
+     */
+    public static ObjectNode update(final CommandInput commandInput) {
+        User user = admin.getUser(commandInput.getUsername());
+
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("command", commandInput.getCommand());
+        objectNode.put("user", commandInput.getUsername());
+        objectNode.put("timestamp", commandInput.getTimestamp());
+        objectNode.put("message", "The recommendations for user "
+                + commandInput.getUsername() + " have been updated successfully.");
+        if (commandInput.getRecommendationType().equals("fans_playlist")) {
+            if (user.getPlayer().getCurrentAudioFile() instanceof Song song) {
+                String artist = song.getArtist();
+                Playlist playlist = new Playlist(artist
+                        + " Fan Club recommendations", commandInput.getUsername());
+                user.getPlaylistsRecommendations().add(playlist);
+            }
+        }
+        if (commandInput.getRecommendationType().equals("random_song")) {
+            if (user.getPlayer().getCurrentAudioFile() instanceof Song song) {
+                PlayerStats stats = user.getPlayerStats();
+                if ((song.getDuration() - stats.getRemainedTime()) >= 30) {
+                    List<Song> songs = new ArrayList<>();
+                    for (Song song1 : admin.getSongs()) {
+                        if (song1.matchesGenre(song.getGenre())) {
+                            songs.add(song1);
+                        }
+                    }
+                    Random random = new Random(song.getDuration() - stats.getRemainedTime());
+                    int randomIndex = random.nextInt(songs.size());
+                    Song song1 = songs.get(randomIndex);
+                    user.getSongRecommendations().add(song1);
+                    user.setLastSong(song1);
+                }
+            }
+        }
+        if (commandInput.getRecommendationType().equals("random_playlist")) {
+            if (user.getPlayer().getCurrentAudioFile() instanceof Song song) {
+                Playlist playlist = new Playlist(commandInput.getUsername()
+                        + "'s recommendations", commandInput.getUsername());
+                user.getPlaylistsRecommendations().add(playlist);
+            }
+        }
+        return objectNode;
+    }
+
+    /**
+     * Load object node.
+     *
+     * @param commandInput the command input
+     * @return the object node
+     */
+    public static ObjectNode prevPage(final CommandInput commandInput) {
+        User user = admin.getUser(commandInput.getUsername());
+
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("command", commandInput.getCommand());
+        objectNode.put("user", commandInput.getUsername());
+        objectNode.put("timestamp", commandInput.getTimestamp());
+        objectNode.put("message", "The user " + commandInput.getUsername()
+                + " has navigated successfully to the previous page.");
+        user.setCurrentPage(user.getPages().get(user.getIndex() - 2));
+        user.setIndex(user.getIndex() - 1);
+        return objectNode;
+    }
+
+    /**
+     * Load object node.
+     *
+     * @param commandInput the command input
+     * @return the object node
+     */
+    public static ObjectNode nextPage(final CommandInput commandInput) {
+        User user = admin.getUser(commandInput.getUsername());
+
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("command", commandInput.getCommand());
+        objectNode.put("user", commandInput.getUsername());
+        objectNode.put("timestamp", commandInput.getTimestamp());
+        if ((user.getIndex() + 1) > (user.getPages().size() - 1)) {
+            objectNode.put("message", "There are no pages left to go forward.");
+        } else {
+            objectNode.put("message", "The user " + commandInput.getUsername()
+                    + " has navigated successfully to the next page.");
+            user.setCurrentPage(user.getPages().get(user.getIndex()));
+            user.setIndex(user.getIndex() + 1);
+        }
+        return objectNode;
+    }
+
+    /**
+     * Load object node.
+     *
+     * @param commandInput the command input
+     * @return the object node
+     */
+    public static ObjectNode loadRecommendations(final CommandInput commandInput) {
+        User user = admin.getUser(commandInput.getUsername());
+        if (user.getLastSong() != null) {
+            user.getPlayer().setSource(user.getLastSong(), "song");
+            if (user.getPlayer().getSource() != null && user.getPlayer().getListened().get(user.getPlayer().getSource().getAudioFile()) != null) {
+                //System.out.println(player.getSource().getAudioFile().getName());
+                user.getPlayer().getListened().put(user.getPlayer().getSource().getAudioFile(), user.getPlayer().getListened().get(user.getPlayer().getSource().getAudioFile()) + 1);
+            } else if (user.getPlayer().getSource() != null) {
+                //System.out.println(source.getAudioFile().getName());
+                if (user.getPlayer().getSource().getAudioFile() instanceof Song song) {
+                    if (!admin.getListenedArtists().contains(song.getArtist())) {
+                        admin.getListenedArtists().add(song.getArtist());
+                    }
+                }
+                user.getPlayer().getListened().put(user.getPlayer().getSource().getAudioFile(), 1);
+            }
+
+            user.getPlayer().pause();
+        }
+
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("command", commandInput.getCommand());
+        objectNode.put("user", commandInput.getUsername());
+        objectNode.put("timestamp", commandInput.getTimestamp());
+        objectNode.put("message", "Playback loaded successfully.");
+
+        return objectNode;
+    }
+
+    /**
+     * Load object node.loadRecommendations
+     *
+     * @param commandInput the command input
+     * @return the object node
+     */
+    public static ObjectNode subscribe(final CommandInput commandInput) {
+        User user = admin.getUser(commandInput.getUsername());
+        String artist = null;
+        if (user.getCurrentPage() instanceof ArtistPage artistPage) {
+            artist = artistPage.getArtist().getUsername();
+        }
+
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("command", commandInput.getCommand());
+        objectNode.put("user", commandInput.getUsername());
+        objectNode.put("timestamp", commandInput.getTimestamp());
+        objectNode.put("message", commandInput.getUsername() + " subscribed to " + artist + " successfully.");
+
+        return objectNode;
+    }
+
+    /**
+     * Load object node.loadRecommendations
+     *
+     * @param commandInput the command input
+     * @return the object node
+     */
+    public static ObjectNode getNotifications(final CommandInput commandInput) {
+        User user = admin.getUser(commandInput.getUsername());
+
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("command", commandInput.getCommand());
+        objectNode.put("user", commandInput.getUsername());
+        objectNode.put("timestamp", commandInput.getTimestamp());
+        objectNode.put("message", commandInput.getUsername() + " subscribed to successfully.");
+
+        return objectNode;
+    }
+
+    /**
+     * Load object node.loadRecommendations
      *
      * @param commandInput the command input
      * @return the object node

@@ -7,9 +7,7 @@ import app.audio.Collections.PlaylistOutput;
 import app.audio.Files.AudioFile;
 import app.audio.Files.Song;
 import app.audio.LibraryEntry;
-import app.pages.HomePage;
-import app.pages.LikedContentPage;
-import app.pages.Page;
+import app.pages.*;
 import app.player.Player;
 import app.player.PlayerStats;
 import app.searchBar.Filters;
@@ -50,6 +48,27 @@ public final class User extends UserAbstract {
     private static Admin admin;
     @Getter
     private List<Merchandise> merchandises = new ArrayList<>();
+    @Getter
+    @Setter
+    private List<Page> pages = new ArrayList<>();
+    @Getter
+    @Setter
+    private List<Playlist> playlistsRecommendations = new ArrayList<>();
+    @Getter
+    @Setter
+    private List<Song> songRecommendations = new ArrayList<>();
+    @Getter
+    @Setter
+    private int index = 0;
+    @Getter
+    @Setter
+    private Song lastSong;
+    @Getter
+    @Setter
+    private HashMap<String, String> notificationName = new HashMap<>();
+    @Getter
+    @Setter
+    private HashMap<String, String> notificationDescription = new HashMap<>();
 
     /**
      * Update admin.
@@ -176,10 +195,8 @@ public final class User extends UserAbstract {
 
         player.setSource(searchBar.getLastSelected(), searchBar.getLastSearchType());
         if (player.getSource() != null && player.getListened().get(player.getSource().getAudioFile()) != null ) {
-            //System.out.println(player.getSource().getAudioFile().getName());
             player.getListened().put(player.getSource().getAudioFile(), player.getListened().get(player.getSource().getAudioFile()) + 1);
         } else if (player.getSource() != null) {
-            //System.out.println(source.getAudioFile().getName());
             if (player.getSource().getAudioFile() instanceof Song song) {
                 if (!admin.getListenedArtists().contains(song.getArtist())) {
                     admin.getListenedArtists().add(song.getArtist());

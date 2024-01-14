@@ -2,6 +2,8 @@ package app.user;
 
 import app.audio.Collections.Podcast;
 import app.pages.HostPage;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.ArrayList;
 
@@ -11,6 +13,9 @@ import java.util.ArrayList;
 public final class Host extends ContentCreator {
     private ArrayList<Podcast> podcasts;
     private ArrayList<Announcement> announcements;
+    @Getter
+    @Setter
+    private HostPage hostPage;
 
     /**
      * Instantiates a new Host.

@@ -143,7 +143,13 @@ public final class Main {
                 case "wrapped" -> outputs.add(CommandRunner.wrapped(command));
                 case "buyMerch" -> outputs.add(CommandRunner.buyMerch(command));
                 case "seeMerch" -> outputs.add(CommandRunner.seeMerch(command));
-                //default -> System.out.println("Invalid command " + commandName);
+                case "updateRecommendations" -> outputs.add(CommandRunner.update(command));
+                case "previousPage" -> outputs.add(CommandRunner.prevPage(command));
+                case "nextPage" -> outputs.add(CommandRunner.nextPage(command));
+                case "loadRecommendations" -> outputs.add(CommandRunner.loadRecommendations(command));
+                case "subscribe" -> outputs.add(CommandRunner.subscribe(command));
+                case "getNotifications" -> outputs.add(CommandRunner.getNotifications(command));
+                default -> System.out.println("Invalid command " + commandName);
             }
         }
         outputs.add(CommandRunner.endProgram());

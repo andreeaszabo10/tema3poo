@@ -4,6 +4,7 @@ import app.audio.Collections.Album;
 import app.user.Artist;
 import app.user.Event;
 import app.user.Merchandise;
+import lombok.Getter;
 
 import java.util.List;
 
@@ -11,19 +12,24 @@ import java.util.List;
  * The type Artist page.
  */
 public final class ArtistPage implements Page {
-    private List<Album> albums;
-    private List<Merchandise> merch;
-    private List<Event> events;
+    @Getter
+    private Artist artist;
+    @Getter
+    private final List<Album> albums;
+    @Getter
+    private final List<Merchandise> merch;
+    private final List<Event> events;
 
     /**
      * Instantiates a new Artist page.
      *
-     * @param artist the artist
+     * @param artist1 the artist
      */
-    public ArtistPage(final Artist artist) {
-        albums = artist.getAlbums();
-        merch = artist.getMerch();
-        events = artist.getEvents();
+    public ArtistPage(final Artist artist1) {
+        artist = artist1;
+        albums = artist1.getAlbums();
+        merch = artist1.getMerch();
+        events = artist1.getEvents();
     }
 
     @Override
