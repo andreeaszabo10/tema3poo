@@ -44,6 +44,24 @@ public final class Song extends AudioFile {
     }
 
     @Override
+    public String getArtist() {
+        return this.artist;
+    }
+
+    @Override
+    public String getGenre() {
+        return this.genre;
+    }
+    @Override
+    public String getAlbum() {
+        return this.album;
+    }
+    @Override
+    public boolean isSong() {
+        return true;
+    }
+
+    @Override
     public boolean matchesAlbum(final String albumName) {
         return this.getAlbum().equalsIgnoreCase(albumName);
     }

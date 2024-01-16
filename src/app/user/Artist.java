@@ -1,12 +1,15 @@
 package app.user;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import app.audio.Collections.Album;
 import app.audio.Collections.AlbumOutput;
+import app.audio.Files.AudioFile;
 import app.audio.Files.Song;
 import app.pages.ArtistPage;
+import app.pages.PageFactory;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -22,7 +25,25 @@ public final class Artist extends ContentCreator {
     private ArtistPage artistPage;
     @Getter
     @Setter
-    private double merchRevenue = 0.0;
+    private double merchRevenue = 0;
+    @Getter
+    @Setter
+    private double songRevenue = 0;
+    @Getter
+    @Setter
+    private double total = 0;
+    @Getter
+    @Setter
+    private List<User> subscribers = new ArrayList<>();
+    @Getter
+    @Setter
+    private HashMap<AudioFile, Integer> mostListened = new HashMap<>();
+    @Getter
+    @Setter
+    private String theSong = "N/A";
+    @Getter
+    @Setter
+    private int numberOfSongs = 0;
 
     /**
      * Instantiates a new Artist.
@@ -37,7 +58,7 @@ public final class Artist extends ContentCreator {
         merch = new ArrayList<>();
         events = new ArrayList<>();
 
-        super.setPage(new ArtistPage(this));
+        super.setPage(PageFactory.createArtistPage(this));
     }
 
     /**

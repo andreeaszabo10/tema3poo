@@ -4,7 +4,6 @@ import app.audio.Collections.*;
 import app.audio.Files.AudioFile;
 import app.audio.Files.Episode;
 import app.audio.Files.Song;
-import app.pages.ArtistPage;
 import app.player.PlayerStats;
 import app.searchBar.Filters;
 import app.user.Artist;
@@ -27,7 +26,7 @@ public final class CommandRunner {
      * The Object mapper.
      */
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    private static Admin admin;
+    public static Admin admin;
 
     /**
      * Update admin.
@@ -84,7 +83,7 @@ public final class CommandRunner {
         admin.updateTimestamp(commandInput.getTimestamp());
 
         if (user != null) {
-            if (!user.getPlayer().getListened().isEmpty()){
+            if (!user.getPlayer().getListened().isEmpty()) {
                 HashMap<String, Integer> topArtists = new HashMap<>();
                 for (Artist artist : Admin.getInstance().getArtists()) {
                     int count = 0;
@@ -111,13 +110,12 @@ public final class CommandRunner {
                 HashMap<String, Integer> topAlbums = new HashMap<>();
                 for (Map.Entry<AudioFile, Integer> entry
                         : user.getPlayer().getListened().entrySet()) {
-                    if (entry.getKey() instanceof Song song) {
-                        if (topAlbums.containsKey(song.getAlbum())) {
-                            topAlbums.put(song.getAlbum(),
-                                    topAlbums.get(song.getAlbum()) + entry.getValue());
-                        } else {
-                            topAlbums.put(song.getAlbum(), entry.getValue());
-                        }
+                    if (topAlbums.containsKey(entry.getKey().getAlbum())
+                            && entry.getKey().getAlbum() != null) {
+                        topAlbums.put(entry.getKey().getAlbum(),
+                                topAlbums.get(entry.getKey().getAlbum()) + entry.getValue());
+                    } else if (entry.getKey().getAlbum() != null) {
+                        topAlbums.put(entry.getKey().getAlbum(), entry.getValue());
                     }
                 }
                 topAlbums = get5(topAlbums);
@@ -127,12 +125,12 @@ public final class CommandRunner {
                 HashMap<String, Integer> topEpisodes = new HashMap<>();
                 for (Map.Entry<AudioFile, Integer> entry
                         : user.getPlayer().getListened().entrySet()) {
-                    if (entry.getKey() instanceof Episode episode) {
-                        if (topEpisodes.containsKey(episode.getName())) {
-                            topEpisodes.put(episode.getName(),
-                                    topAlbums.get(episode.getName()) + entry.getValue());
+                    if (entry.getKey().isEpisode()) {
+                        if (topEpisodes.containsKey(entry.getKey().getName())) {
+                            topEpisodes.put(entry.getKey().getName(),
+                                    topAlbums.get(entry.getKey().getName()) + entry.getValue());
                         } else {
-                            topEpisodes.put(episode.getName(), entry.getValue());
+                            topEpisodes.put(entry.getKey().getName(), entry.getValue());
                         }
                     }
                 }
@@ -156,12 +154,12 @@ public final class CommandRunner {
             for (User user1 : admin.getUsers()) {
                 for (Map.Entry<AudioFile, Integer> entry
                         : user1.getPlayer().getListened().entrySet()) {
-                    if (entry.getKey() instanceof Song song && song.matchesArtist(art.getUsername())) {
-                        if (topAlbums.containsKey(song.getAlbum())) {
-                            topAlbums.put(song.getAlbum(),
-                                    topAlbums.get(song.getAlbum()) + entry.getValue());
+                    if (entry.getKey().matchesArtist(art.getUsername())) {
+                        if (topAlbums.containsKey(entry.getKey().getAlbum())) {
+                            topAlbums.put(entry.getKey().getAlbum(),
+                                    topAlbums.get(entry.getKey().getAlbum()) + entry.getValue());
                         } else {
-                            topAlbums.put(song.getAlbum(), entry.getValue());
+                            topAlbums.put(entry.getKey().getAlbum(), entry.getValue());
                         }
                     }
                 }
@@ -172,17 +170,8 @@ public final class CommandRunner {
             for (User user1 : admin.getUsers()) {
                 for (Map.Entry<AudioFile, Integer> entry
                         : user1.getPlayer().getListened().entrySet()) {
-                    if (entry.getKey() instanceof Song song && song.matchesArtist(art.getUsername())) {
-                        if (topFan.containsKey(user1.getUsername())) {
-                            topFan.put(user1.getUsername(), topFan.get(user1.getUsername()) + entry.getValue());
-                        } else {
-                            topFan.put(user1.getUsername(), entry.getValue());
-                        }
-                        if (topSongs.containsKey(song.getName())) {
-                            topSongs.put(song.getName(), topSongs.get(song.getName()) + entry.getValue());
-                        } else {
-                            topSongs.put(song.getName(), entry.getValue());
-                        }
+                    if (entry.getKey().matchesArtist(art.getUsername())) {
+                        getFan(topSongs, topFan, user1, entry);
                     }
                 }
             }
@@ -205,7 +194,11 @@ public final class CommandRunner {
             outputNode.put("command", "wrapped");
             outputNode.put("user", commandInput.getUsername());
             outputNode.put("timestamp", commandInput.getTimestamp());
-            outputNode.set("result", resultNode);
+            if (listeners != 0) {
+                outputNode.set("result", resultNode);
+            } else {
+                outputNode.put("message", "No data to show for artist " + art.getUsername() + ".");
+            }
         }
         if (host != null) {
             HashMap<String, Integer> topEpisodes = new HashMap<>();
@@ -214,20 +207,11 @@ public final class CommandRunner {
                 for (User user1 : admin.getUsers()) {
                     for (Map.Entry<AudioFile, Integer> entry
                             : user1.getPlayer().getListened().entrySet()) {
-                        if (entry.getKey() instanceof Episode episode) {
+                        if (entry.getKey().isEpisode()) {
                             for (Episode episode1 : podcast.getEpisodes()) {
-                                if (episode1.getName().equals(episode.getName())) {
+                                if (episode1.getName().equals(entry.getKey().getName())) {
                                     if (podcast.matchesOwner(host.getUsername())) {
-                                        if (topFan.containsKey(user1.getUsername())) {
-                                            topFan.put(user1.getUsername(), topFan.get(user1.getUsername()) + entry.getValue());
-                                        } else {
-                                            topFan.put(user1.getUsername(), entry.getValue());
-                                        }
-                                        if (topEpisodes.containsKey(episode.getName())) {
-                                            topEpisodes.put(episode.getName(), topEpisodes.get(episode.getName()) + entry.getValue());
-                                        } else {
-                                            topEpisodes.put(episode.getName(), entry.getValue());
-                                        }
+                                        getFan(topEpisodes, topFan, user1, entry);
                                     }
                                 }
                             }
@@ -248,46 +232,163 @@ public final class CommandRunner {
         return outputNode;
     }
 
-    private static HashMap<String, Integer> getMap(User user) {
+    private static void getFan(final HashMap<String, Integer> topEpisodes,
+                               final HashMap<String, Integer> topFan,
+                               final User user1, final Map.Entry<AudioFile, Integer> entry) {
+        if (topFan.containsKey(user1.getUsername())) {
+            topFan.put(user1.getUsername(),
+                    topFan.get(user1.getUsername())
+                            + entry.getValue());
+        } else {
+            topFan.put(user1.getUsername(), entry.getValue());
+        }
+        if (topEpisodes.containsKey(entry.getKey().getName())) {
+            topEpisodes.put(entry.getKey().getName(),
+                    topEpisodes.get(entry.getKey().getName())
+                            + entry.getValue());
+        } else {
+            topEpisodes.put(entry.getKey().getName(), entry.getValue());
+        }
+    }
+
+    /**
+     * get hashmap
+     */
+    private static HashMap<String, Integer> getMap(final User user) {
         HashMap<String, Integer> topSongs = new HashMap<>();
         for (Map.Entry<AudioFile, Integer> entry
                 : user.getPlayer().getListened().entrySet()) {
-            if (entry.getKey() instanceof Song song) {
-                if (topSongs.containsKey(song.getName())) {
-                    topSongs.put(song.getName(), topSongs.get(song.getName()) + entry.getValue());
+            if (entry.getKey().isSong()) {
+                if (topSongs.containsKey(entry.getKey().getName())) {
+                    topSongs.put(entry.getKey().getName(),
+                            topSongs.get(entry.getKey().getName()) + entry.getValue());
                 } else {
-                    topSongs.put(song.getName(), entry.getValue());
+                    topSongs.put(entry.getKey().getName(), entry.getValue());
                 }
             }
         }
         return topSongs;
     }
 
-    private static HashMap<String, Integer> getStringIntegerHashMap(User user) {
+    /**
+     * get hashmap
+     */
+    private static HashMap<String, Integer> getStringIntegerHashMap(final User user) {
         HashMap<String, Integer> topGenres = new HashMap<>();
         for (Map.Entry<AudioFile, Integer> entry
                 : user.getPlayer().getListened().entrySet()) {
-            if (entry.getKey() instanceof Song song) {
-                if (topGenres.containsKey(song.getGenre())) {
-                    topGenres.put(song.getGenre(),
-                            topGenres.get(song.getGenre()) + entry.getValue());
+            if (entry.getKey().isSong()) {
+                if (topGenres.containsKey(entry.getKey().getGenre())) {
+                    topGenres.put(entry.getKey().getGenre(),
+                            topGenres.get(entry.getKey().getGenre()) + entry.getValue());
                 } else {
-                    topGenres.put(song.getGenre(), entry.getValue());
+                    topGenres.put(entry.getKey().getGenre(), entry.getValue());
                 }
             }
         }
         return topGenres;
     }
 
-    private static HashMap<String, Integer> get5(HashMap<String, Integer> topAlbums) {
+    /**
+     * get top 5
+     */
+    private static HashMap<String, Integer> get5(HashMap<String, Integer> top) {
         HashMap<String, Integer> result = new LinkedHashMap<>();
-        topAlbums.entrySet().stream()
+        top.entrySet().stream()
                 .sorted(Map.Entry.<String, Integer>comparingByValue()
                         .reversed().thenComparing(Map.Entry.comparingByKey()))
                 .limit(5)
                 .forEach(entry -> result.put(entry.getKey(), entry.getValue()));
-        topAlbums = result;
-        return topAlbums;
+        return result;
+    }
+
+    /**
+     * buyPremium object node.
+     *
+     * @param commandInput the command input
+     * @return the object node
+     */
+    public static ObjectNode buyPremium(final CommandInput commandInput) {
+        User user = admin.getUser(commandInput.getUsername());
+        admin.updateTimestamp(commandInput.getTimestamp());
+
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("command", commandInput.getCommand());
+        objectNode.put("user", commandInput.getUsername());
+        objectNode.put("timestamp", commandInput.getTimestamp());
+        if (!user.isPremium()) {
+            objectNode.put("message", commandInput.getUsername()
+                    + " bought the subscription successfully.");
+            user.setPremium(true);
+        } else {
+            objectNode.put("message", commandInput.getUsername()
+                    + " is already a premium user.");
+        }
+
+        return objectNode;
+    }
+
+    /**
+     * cancelPremium object node.
+     *
+     * @param commandInput the command input
+     * @return the object node
+     */
+    public static ObjectNode cancelPremium(final CommandInput commandInput) {
+        User user = admin.getUser(commandInput.getUsername());
+        admin.updateTimestamp(commandInput.getTimestamp());
+
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("command", commandInput.getCommand());
+        objectNode.put("user", commandInput.getUsername());
+        objectNode.put("timestamp", commandInput.getTimestamp());
+        if (user.isPremium()) {
+            objectNode.put("message", commandInput.getUsername()
+                    + " cancelled the subscription successfully.");
+            HashMap<Artist, Integer> list = new HashMap<>();
+            for (AudioFile audioFile : user.getPremiumListen()) {
+                if (audioFile.isSong()) {
+                    Artist artist = getArtistDetails(audioFile.getArtist());
+                    if (list.containsKey(artist)) {
+                        list.put(artist, list.get(artist) + 1);
+                    } else {
+                        list.put(artist, 1);
+                    }
+                    if (artist.getMostListened().containsKey(audioFile)) {
+                        artist.getMostListened().put(audioFile, artist
+                                .getMostListened().get(audioFile) + 1);
+                        artist.setNumberOfSongs(artist.getNumberOfSongs() + 1);
+                    } else {
+                        artist.setNumberOfSongs(artist.getNumberOfSongs() + 1);
+                        artist.getMostListened().put(audioFile, 1);
+                    }
+                }
+            }
+            for (Artist artist : Admin.getInstance().getArtists()) {
+                int maxListens = Integer.MIN_VALUE;
+                for (Map.Entry<AudioFile, Integer> entry : artist
+                        .getMostListened().entrySet()) {
+                    if (entry.getValue() > maxListens) {
+                        maxListens = entry.getValue();
+                        artist.setTheSong(entry.getKey().getName());
+                    }
+                }
+            }
+
+            for (Artist artist : Admin.getInstance().getArtists()) {
+                if (list.containsKey(artist)) {
+                    artist.setSongRevenue(artist.getSongRevenue()
+                            + (double) 1000000 / artist.getNumberOfSongs() * list.get(artist));
+                }
+            }
+            user.setPremiumListen(new ArrayList<>());
+            user.setPremium(false);
+        } else {
+            objectNode.put("message", commandInput.getUsername()
+                    + " is not a premium user.");
+        }
+
+        return objectNode;
     }
 
     /**
@@ -311,7 +412,7 @@ public final class CommandRunner {
     }
 
     /**
-     * Select object node.
+     * buyMerch object node.
      *
      * @param commandInput the command input
      * @return the object node
@@ -348,7 +449,7 @@ public final class CommandRunner {
     }
 
     /**
-     * Select object node.
+     * seeMerch object node.
      *
      * @param commandInput the command input
      * @return the object node
@@ -370,11 +471,9 @@ public final class CommandRunner {
     }
 
     /**
-     * Select object node.
-     *
-     * @return the object node
+     * get artist details
      */
-    public static Artist getArtistDetails(String artistName) {
+    public static Artist getArtistDetails(final String artistName) {
         for (Artist artist : admin.getArtists()) {
             if (artist.getUsername().equals(artistName)) {
                 return artist;
@@ -384,11 +483,9 @@ public final class CommandRunner {
     }
 
     /**
-     * Select object node.
-     *
-     * @return the object node
+     * get host details
      */
-    public static Host getHostDetails(String hostName) {
+    public static Host getHostDetails(final String hostName) {
         for (Host host : admin.getHosts()) {
             if (host.getUsername().equals(hostName)) {
                 return host;
@@ -398,28 +495,69 @@ public final class CommandRunner {
     }
 
     /**
-     * Select object node.
+     * endProgram object node.
      *
      * @return the object node
      */
     public static ObjectNode endProgram() {
         ObjectNode resultNode = JsonNodeFactory.instance.objectNode();
         List<Artist> artists = new ArrayList<>();
+        for (User user : admin.getUsers()) {
+            if (user.isPremium()) {
+                HashMap<Artist, Integer> list = new HashMap<>();
+                for (AudioFile audioFile : user.getPremiumListen()) {
+                    Artist artist = getArtistDetails(audioFile.getArtist());
+                    if (list.containsKey(artist)) {
+                        list.put(artist, list.get(artist) + 1);
+                    } else {
+                        list.put(artist, 1);
+                    }
+                    if (artist.getMostListened().containsKey(audioFile)) {
+                        artist.getMostListened().put(audioFile,
+                                artist.getMostListened().get(audioFile) + 1);
+                        artist.setNumberOfSongs(artist.getNumberOfSongs() + 1);
+                    } else {
+                        artist.setNumberOfSongs(artist.getNumberOfSongs() + 1);
+                        artist.getMostListened().put(audioFile, 1);
+                    }
+                }
+                for (Artist artist : admin.getArtists()) {
+                    int maxListens = -1;
+                    for (Map.Entry<AudioFile, Integer> entry : artist
+                            .getMostListened().entrySet()) {
+                        if (entry.getValue() >= maxListens) {
+                            maxListens = entry.getValue();
+                            artist.setTheSong(entry.getKey().getName());
+                        }
+                    }
+                }
+
+                for (Artist artist : admin.getArtists()) {
+                    if (list.containsKey(artist)) {
+                        artist.setSongRevenue(artist.getSongRevenue()
+                                + (double) 1000000 / artist.getNumberOfSongs() * list.get(artist));
+                    }
+                }
+                user.setPremium(false);
+            }
+        }
         for (String artist : admin.getListenedArtists()) {
             Artist artist1 = getArtistDetails(artist);
             artists.add(artist1);
+            artist1.setTotal(artist1.getSongRevenue() + artist1.getMerchRevenue());
         }
 
         artists.sort(
-                Comparator.comparingDouble(Artist::getMerchRevenue).reversed()
+                Comparator.comparingDouble(Artist::getTotal).reversed()
                         .thenComparing(Artist::getUsername)
         );
+
         for (Artist artist : artists) {
             ObjectNode artistNode = JsonNodeFactory.instance.objectNode();
             artistNode.put("merchRevenue", artist.getMerchRevenue());
-            artistNode.put("songRevenue", 0.0);
+            artistNode.put("songRevenue", artist.getSongRevenue());
             artistNode.put("ranking", artists.indexOf(artist) + 1);
-            artistNode.put("mostProfitableSong", "N/A");
+            artistNode.put("mostProfitableSong", artist.getTheSong());
             resultNode.set(artist.getUsername(), artistNode);
         }
 
@@ -430,7 +568,7 @@ public final class CommandRunner {
     }
 
     /**
-     * Load object node.
+     * updateRecommendations object node.
      *
      * @param commandInput the command input
      * @return the object node
@@ -445,43 +583,39 @@ public final class CommandRunner {
         objectNode.put("message", "The recommendations for user "
                 + commandInput.getUsername() + " have been updated successfully.");
         if (commandInput.getRecommendationType().equals("fans_playlist")) {
-            if (user.getPlayer().getCurrentAudioFile() instanceof Song song) {
-                String artist = song.getArtist();
-                Playlist playlist = new Playlist(artist
-                        + " Fan Club recommendations", commandInput.getUsername());
-                user.getPlaylistsRecommendations().add(playlist);
-            }
+            String artist = user.getPlayer().getCurrentAudioFile().getArtist();
+            Playlist playlist = new Playlist(artist
+                    + " Fan Club recommendations", commandInput.getUsername());
+            user.getPlaylistsRecommendations().add(playlist);
         }
         if (commandInput.getRecommendationType().equals("random_song")) {
-            if (user.getPlayer().getCurrentAudioFile() instanceof Song song) {
-                PlayerStats stats = user.getPlayerStats();
-                if ((song.getDuration() - stats.getRemainedTime()) >= 30) {
-                    List<Song> songs = new ArrayList<>();
-                    for (Song song1 : admin.getSongs()) {
-                        if (song1.matchesGenre(song.getGenre())) {
-                            songs.add(song1);
-                        }
+            PlayerStats stats = user.getPlayerStats();
+            if ((user.getPlayer().getCurrentAudioFile()
+                    .getDuration() - stats.getRemainedTime()) >= 30) {
+                List<Song> songs = new ArrayList<>();
+                for (Song song1 : admin.getSongs()) {
+                    if (song1.matchesGenre(user.getPlayer().getCurrentAudioFile().getGenre())) {
+                        songs.add(song1);
                     }
-                    Random random = new Random(song.getDuration() - stats.getRemainedTime());
-                    int randomIndex = random.nextInt(songs.size());
-                    Song song1 = songs.get(randomIndex);
-                    user.getSongRecommendations().add(song1);
-                    user.setLastSong(song1);
                 }
+                Random random = new Random(user.getPlayer().getCurrentAudioFile().getDuration()
+                        - stats.getRemainedTime());
+                int randomIndex = random.nextInt(songs.size());
+                Song song1 = songs.get(randomIndex);
+                user.getSongRecommendations().add(song1);
+                user.setLastSong(song1);
             }
         }
         if (commandInput.getRecommendationType().equals("random_playlist")) {
-            if (user.getPlayer().getCurrentAudioFile() instanceof Song song) {
-                Playlist playlist = new Playlist(commandInput.getUsername()
-                        + "'s recommendations", commandInput.getUsername());
-                user.getPlaylistsRecommendations().add(playlist);
-            }
+            Playlist playlist = new Playlist(commandInput.getUsername()
+                    + "'s recommendations", commandInput.getUsername());
+            user.getPlaylistsRecommendations().add(playlist);
         }
         return objectNode;
     }
 
     /**
-     * Load object node.
+     * previousPage object node.
      *
      * @param commandInput the command input
      * @return the object node
@@ -501,7 +635,7 @@ public final class CommandRunner {
     }
 
     /**
-     * Load object node.
+     * nextPage object node.
      *
      * @param commandInput the command input
      * @return the object node
@@ -525,7 +659,7 @@ public final class CommandRunner {
     }
 
     /**
-     * Load object node.
+     * LoadRecommendations object node.
      *
      * @param commandInput the command input
      * @return the object node
@@ -534,15 +668,16 @@ public final class CommandRunner {
         User user = admin.getUser(commandInput.getUsername());
         if (user.getLastSong() != null) {
             user.getPlayer().setSource(user.getLastSong(), "song");
-            if (user.getPlayer().getSource() != null && user.getPlayer().getListened().get(user.getPlayer().getSource().getAudioFile()) != null) {
-                //System.out.println(player.getSource().getAudioFile().getName());
-                user.getPlayer().getListened().put(user.getPlayer().getSource().getAudioFile(), user.getPlayer().getListened().get(user.getPlayer().getSource().getAudioFile()) + 1);
+            if (user.getPlayer().getSource() != null && user.getPlayer().getListened()
+                    .get(user.getPlayer().getSource().getAudioFile()) != null) {
+                user.getPlayer().getListened().put(user.getPlayer().getSource().getAudioFile(),
+                        user.getPlayer().getListened()
+                                .get(user.getPlayer().getSource().getAudioFile()) + 1);
             } else if (user.getPlayer().getSource() != null) {
-                //System.out.println(source.getAudioFile().getName());
-                if (user.getPlayer().getSource().getAudioFile() instanceof Song song) {
-                    if (!admin.getListenedArtists().contains(song.getArtist())) {
-                        admin.getListenedArtists().add(song.getArtist());
-                    }
+                if (!admin.getListenedArtists().contains(user.getPlayer()
+                        .getSource().getAudioFile().getArtist())) {
+                    admin.getListenedArtists().add(user.getPlayer()
+                            .getSource().getAudioFile().getArtist());
                 }
                 user.getPlayer().getListened().put(user.getPlayer().getSource().getAudioFile(), 1);
             }
@@ -560,29 +695,45 @@ public final class CommandRunner {
     }
 
     /**
-     * Load object node.loadRecommendations
+     * subscribe object node.
      *
      * @param commandInput the command input
      * @return the object node
      */
     public static ObjectNode subscribe(final CommandInput commandInput) {
         User user = admin.getUser(commandInput.getUsername());
-        String artist = null;
-        if (user.getCurrentPage() instanceof ArtistPage artistPage) {
-            artist = artistPage.getArtist().getUsername();
+        String artist = user.getCurrentPage().getArtist();
+        Artist artist1 = null;
+        if (artist != null) {
+            artist1 = getArtistDetails(artist);
         }
 
         ObjectNode objectNode = objectMapper.createObjectNode();
         objectNode.put("command", commandInput.getCommand());
         objectNode.put("user", commandInput.getUsername());
         objectNode.put("timestamp", commandInput.getTimestamp());
-        objectNode.put("message", commandInput.getUsername() + " subscribed to " + artist + " successfully.");
+        int ok = 1;
+        for (User user1 : artist1.getSubscribers()) {
+            if (user.getUsername().equals(user1.getUsername())) {
+                ok = 0;
+                break;
+            }
+        }
+        if (ok == 1) {
+            objectNode.put("message", commandInput.getUsername()
+                    + " subscribed to " + artist1.getUsername() + " successfully.");
+            artist1.getSubscribers().add(user);
+        } else {
+            objectNode.put("message", commandInput.getUsername()
+                    + " unsubscribed from " + artist1.getUsername() + " successfully.");
+            artist1.getSubscribers().remove(user);
+        }
 
         return objectNode;
     }
 
     /**
-     * Load object node.loadRecommendations
+     * getNotifications object node.loadRecommendations
      *
      * @param commandInput the command input
      * @return the object node
@@ -594,7 +745,16 @@ public final class CommandRunner {
         objectNode.put("command", commandInput.getCommand());
         objectNode.put("user", commandInput.getUsername());
         objectNode.put("timestamp", commandInput.getTimestamp());
-        objectNode.put("message", commandInput.getUsername() + " subscribed to successfully.");
+        ArrayNode notificationsArray = objectMapper.createArrayNode();
+        for (Map<String, String> notification : user.getNotifications()) {
+            ObjectNode notificationNode = objectMapper.createObjectNode();
+            notificationNode.put("name", notification.get("name"));
+            notificationNode.put("description", notification.get("description"));
+            notificationsArray.add(notificationNode);
+        }
+
+        objectNode.set("notifications", notificationsArray);
+        user.setNotifications(new ArrayList<>());
 
         return objectNode;
     }

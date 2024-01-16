@@ -19,6 +19,9 @@ public final class ArtistPage implements Page {
     @Getter
     private final List<Merchandise> merch;
     private final List<Event> events;
+    public String getArtist() {
+        return this.artist.getUsername();
+    }
 
     /**
      * Instantiates a new Artist page.

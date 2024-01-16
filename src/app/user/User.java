@@ -17,8 +17,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * The type User.
@@ -65,10 +65,13 @@ public final class User extends UserAbstract {
     private Song lastSong;
     @Getter
     @Setter
-    private HashMap<String, String> notificationName = new HashMap<>();
+    private List<Map<String, String>> notifications = new ArrayList<>();
     @Getter
     @Setter
-    private HashMap<String, String> notificationDescription = new HashMap<>();
+    private boolean premium = false;
+    @Getter
+    @Setter
+    private List<AudioFile> premiumListen = new ArrayList<>();
 
     /**
      * Update admin.
@@ -94,9 +97,9 @@ public final class User extends UserAbstract {
         lastSearched = false;
         status = true;
 
-        homePage = new HomePage(this);
+        homePage = (HomePage) PageFactory.createHomePage(this);
         currentPage = homePage;
-        likedContentPage = new LikedContentPage(this);
+        likedContentPage = (LikedContentPage) PageFactory.createLikePage(this);
     }
 
     @Override
@@ -194,15 +197,22 @@ public final class User extends UserAbstract {
 
 
         player.setSource(searchBar.getLastSelected(), searchBar.getLastSearchType());
-        if (player.getSource() != null && player.getListened().get(player.getSource().getAudioFile()) != null ) {
-            player.getListened().put(player.getSource().getAudioFile(), player.getListened().get(player.getSource().getAudioFile()) + 1);
+        if (player.getSource() != null
+                && player.getListened().get(player.getSource().getAudioFile()) != null) {
+            player.getListened().put(player.getSource().getAudioFile(),
+                    player.getListened().get(player.getSource().getAudioFile()) + 1);
         } else if (player.getSource() != null) {
-            if (player.getSource().getAudioFile() instanceof Song song) {
-                if (!admin.getListenedArtists().contains(song.getArtist())) {
-                    admin.getListenedArtists().add(song.getArtist());
+            if (player.getSource().getAudioFile().isSong()) {
+                if (!admin.getListenedArtists()
+                        .contains(player.getSource().getAudioFile().getArtist())) {
+                    admin.getListenedArtists()
+                            .add(player.getSource().getAudioFile().getArtist());
                 }
             }
             player.getListened().put(player.getSource().getAudioFile(), 1);
+        }
+        if (this.isPremium() && player.getSource().getAudioFile().isSong()) {
+            this.getPremiumListen().add(player.getSource().getAudioFile());
         }
         searchBar.clearSelection();
 
@@ -629,6 +639,6 @@ public final class User extends UserAbstract {
             return;
         }
 
-        player.simulatePlayer(time);
+        player.simulatePlayer(time, this);
     }
 }

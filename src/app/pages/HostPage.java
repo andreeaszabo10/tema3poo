@@ -12,6 +12,9 @@ import java.util.List;
 public final class HostPage implements Page {
     private List<Podcast> podcasts;
     private List<Announcement> announcements;
+    public String getArtist() {
+        return null;
+    }
 
     /**
      * Instantiates a new Host page.

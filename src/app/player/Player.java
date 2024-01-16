@@ -3,8 +3,8 @@ package app.player;
 import app.Admin;
 import app.audio.Collections.AudioCollection;
 import app.audio.Files.AudioFile;
-import app.audio.Files.Song;
 import app.audio.LibraryEntry;
+import app.user.User;
 import app.utils.Enums;
 import lombok.Getter;
 
@@ -180,7 +180,7 @@ public final class Player {
      *
      * @param time the time
      */
-    public void simulatePlayer(final int time) {
+    public void simulatePlayer(final int time, final User user) {
         int elapsedTime = time;
         if (!paused) {
             while (elapsedTime >= source.getDuration()) {
@@ -190,17 +190,18 @@ public final class Player {
                     break;
                 }
                 if (source != null && listened.get(source.getAudioFile()) != null) {
-                    //System.out.println(source.getAudioFile().getName());
-                    //System.out.println(time);
                     listened.put(source.getAudioFile(), listened.get(source.getAudioFile()) + 1);
                 } else if (source != null) {
-                    if (source.getAudioFile() instanceof Song song) {
-                        if (!admin.getListenedArtists().contains(song.getArtist())) {
-                            admin.getListenedArtists().add(song.getArtist());
+                    if (source.getAudioFile().isSong()) {
+                        if (!admin.getListenedArtists()
+                                .contains(source.getAudioFile().getArtist())) {
+                            admin.getListenedArtists().add(source.getAudioFile().getArtist());
                         }
                     }
-                    //System.out.println(source.getAudioFile().getName());
                     listened.put(source.getAudioFile(), 1);
+                }
+                if (user.isPremium() && source.getAudioFile().isSong()) {
+                    user.getPremiumListen().add(source.getAudioFile());
                 }
             }
             if (!paused) {

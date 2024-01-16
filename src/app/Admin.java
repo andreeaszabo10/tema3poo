@@ -35,6 +35,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static app.CommandRunner.admin;
+
 /**
  * The type Admin.
  */
@@ -393,7 +395,20 @@ public final class Admin {
                   .collect(Collectors.toSet()).isEmpty()) {
             return "%s has the same song at least twice in this album.".formatted(username);
         }
+        Map<String, String> newNotification = new HashMap<>();
+        newNotification.put("name", "New Album");
+        newNotification.put("description", "New Album from " + commandInput.getUsername() + ".");
+        Artist artist = CommandRunner.getArtistDetails(commandInput.getUsername());
 
+        for (User user : admin.getUsers()) {
+            if (artist != null && artist.getSubscribers() != null) {
+                for (User user1 : artist.getSubscribers()) {
+                    if (user.getUsername().equals(user1.getUsername())) {
+                        user.getNotifications().add(newNotification);
+                    }
+                }
+            }
+        }
         songs.addAll(newSongs);
         currentArtist.getAlbums().add(new Album(albumName,
                                                 commandInput.getDescription(),
@@ -555,6 +570,19 @@ public final class Admin {
         if (!checkDate(date)) {
             return "Event for %s does not have a valid date.".formatted(username);
         }
+        Map<String, String> newNotification = new HashMap<>();
+        newNotification.put("name", "New Event");
+        newNotification.put("description", "New Event from " + commandInput.getUsername() + ".");
+
+        for (User user : admin.getUsers()) {
+            if (currentArtist.getSubscribers() != null) {
+                for (User user1 : currentArtist.getSubscribers()) {
+                    if (user.getUsername().equals(user1.getUsername())) {
+                        user.getNotifications().add(newNotification);
+                    }
+                }
+            }
+        }
 
         currentArtist.getEvents().add(new Event(eventName,
                                                 commandInput.getDescription(),
@@ -638,6 +666,18 @@ public final class Admin {
             return "%s has merchandise with the same name.".formatted(currentArtist.getUsername());
         } else if (commandInput.getPrice() < 0) {
             return "Price for merchandise can not be negative.";
+        }
+        Map<String, String> newNotification = new HashMap<>();
+        newNotification.put("name", "New Merchandise");
+        newNotification.put("description", "New Merchandise from " + commandInput.getUsername() + ".");
+        for (User user : admin.getUsers()) {
+            if (currentArtist.getSubscribers() != null) {
+                for (User user1 : currentArtist.getSubscribers()) {
+                    if (user.getUsername().equals(user1.getUsername())) {
+                        user.getNotifications().add(newNotification);
+                    }
+                }
+            }
         }
 
         currentArtist.getMerch().add(new Merchandise(commandInput.getName(),
@@ -729,16 +769,16 @@ public final class Admin {
 
         switch (nextPage) {
             case "Artist" -> {
-                if (user.getPlayer().getCurrentAudioFile() instanceof Song song) {
-                        Artist artist = CommandRunner.getArtistDetails(song.getArtist());
-                        user.setCurrentPage(artist.getPage());
-                    }
+                if (user.getPlayer().getCurrentAudioFile().isSong()) {
+                    Artist artist = CommandRunner.getArtistDetails(user
+                            .getPlayer().getCurrentAudioFile().getArtist());
+                    user.setCurrentPage(artist.getPage());
+                }
             }
             case "Host" -> {
-                if (user.getPlayer().getCurrentAudioCollection() instanceof Podcast podcast) {
-                    Host host = CommandRunner.getHostDetails(podcast.getOwner());
-                    user.setCurrentPage(host.getPage());
-                }
+                Host host = CommandRunner.getHostDetails(user.getPlayer()
+                        .getCurrentAudioCollection().getOwner());
+                user.setCurrentPage(host.getPage());
             }
             case "Home" -> user.setCurrentPage(user.getHomePage());
             case "LikedContent" -> user.setCurrentPage(user.getLikedContentPage());

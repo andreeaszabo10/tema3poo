@@ -10,4 +10,8 @@ public interface Page {
      * @return the current page string
      */
     String printCurrentPage();
+    /**
+     * get artist
+     */
+    String getArtist();
 }

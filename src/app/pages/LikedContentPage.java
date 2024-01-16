@@ -13,6 +13,9 @@ public final class LikedContentPage implements Page {
     /**
      * The Liked songs.
      */
+    public String getArtist() {
+        return null;
+    }
     private List<Song> likedSongs;
     /**
      * The Followed playlists.
