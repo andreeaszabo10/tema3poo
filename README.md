@@ -21,7 +21,7 @@ episodului respectiv si daca se potrivea cu host-ul cautat adaugam intr-un hashm
 face topul fanilor. De asemenea, am facut topul episoadelor si numarul de ascultatori luand size-ul
 listei fanilor.
 2. Monetizare - am incercat sa pun toate melodiile ascultate de userii premium intr-o lista pentru fiecare user, apoi sa calculez la final sau daca se da cancel dupa formula data banii primiti de fiecare
-artist, dar nu mi-a iesit ce trebuia...
+artist
 3. buyMerch - am verificat daca merch-ul cerut exista in lista de merch artistului cerut si apoi
 am adaugat noul merch in lista user-ului curent, am crescut venitul venit din merch al artistului
 respectiv si am adaugat artistul in lista din care afisez la endprogram, in cazul in care nimeni nu a
